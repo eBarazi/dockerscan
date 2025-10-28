@@ -34,5 +34,5 @@ jobs:
           file: Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/dockerscan:latest
-            ghcr.io/${{ github.repository_owner }}/dockerscan:${{ github.run_number }}
+            ghcr.io/${{ github.repository_owner | toLower }}/dockerscan:latest
+            ghcr.io/${{ github.repository_owner | toLower }}/dockerscan:${{ github.run_number }}
