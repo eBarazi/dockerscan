@@ -18,7 +18,6 @@ docker compose up -d
 ```
 docker-compose.yml file:
 ```yml
-version: "3.9"
 services:
   dockerscan:
     image: ghcr.io/ebarazi/dockerscan:latest
