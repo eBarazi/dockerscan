@@ -17,7 +17,7 @@ A lightweight Flask + Trivy web dashboard to scan Docker images for vulnerabilit
 docker compose up -d
 ```
 
-docker-compose.yml file:
+docker-compose.yml
 ```yml
 services:
   dockerscan:
