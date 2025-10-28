@@ -26,7 +26,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
       - "8888:8888"
-    networks:
-      - netprox
     restart: unless-stopped  
 ```
