@@ -15,3 +15,18 @@ A lightweight Flask + Trivy web dashboard to scan Docker images for vulnerabilit
 
 ```bash
 docker compose up -d
+```
+docker-compose.yml file:
+```yml
+version: "3.9"
+services:
+  dockerscan:
+    image: ghcr.io/ebarazi/dockerscan:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "8888:8888"
+    networks:
+      - netprox
+    restart: unless-stopped  
+```
