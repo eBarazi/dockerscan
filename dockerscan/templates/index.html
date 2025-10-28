@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>DockerScan</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1> DockerScan </h1>
+
+  <div class="container">
+    <form id="scanForm">
+      <label for="image">Select an image to scan:</label>
+      <select id="image" name="image">
+        {% for img in images %}
+          <option value="{{ img.tags[0] }}">{{ img.tags[0] }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit">Scan</button>
+    </form>
+
+    <div id="results" class="results hidden">
+      <h2>Scan Results</h2>
+      <pre id="summary"></pre>
+      <button id="toggleRaw">Show Raw JSON</button>
+      <pre id="raw" class="hidden"></pre>
+    </div>
+  </div>
+
+<script>
+  const form = document.getElementById('scanForm');
+  const resultsDiv = document.getElementById('results');
+  const summaryEl = document.getElementById('summary');
+  const rawEl = document.getElementById('raw');
+  const toggleRaw = document.getElementById('toggleRaw');
+  
+  // Create container for detailed list
+  const detailsBox = document.createElement('div');
+  detailsBox.classList.add('details-box');
+  resultsDiv.appendChild(detailsBox);
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    summaryEl.textContent = "🔍 Scanning...";
+    resultsDiv.classList.remove('hidden');
+    rawEl.classList.add('hidden');
+    detailsBox.innerHTML = '';
+  
+    const formData = new FormData(form);
+    try {
+      const res = await fetch('/scan', { method: 'POST', body: formData });
+      const data = await res.json();
+  
+      if (data.error) {
+        summaryEl.textContent = "⚠️ Error: " + data.error;
+        return;
+      }
+  
+      const s = data.summary;
+      const total = Object.values(s).reduce((a,b)=>a+b,0);
+      summaryEl.innerHTML = `
+        <div class="status">
+          <span class="dot red"></span> Critical: ${s.CRITICAL} &nbsp;
+          <span class="dot orange"></span> High: ${s.HIGH} &nbsp;
+          <span class="dot yellow"></span> Medium: ${s.MEDIUM} &nbsp;
+          <span class="dot green"></span> Low: ${s.LOW} &nbsp;
+          <span class="dot gray"></span> Unknown: ${s.UNKNOWN}
+        </div>
+        <div>Total vulnerabilities: ${total}</div>
+      `;
+  
+      // Build readable summaries
+      const vulns = [];
+      data.raw.Results?.forEach(res => {
+        res.Vulnerabilities?.forEach(v => {
+          vulns.push({
+            id: v.VulnerabilityID,
+            pkg: v.PkgName,
+            sev: v.Severity,
+            title: v.Title || "(no title)",
+          });
+        });
+      });
+  
+      if (vulns.length > 0) {
+        const grouped = {};
+        for (const v of vulns) {
+          grouped[v.sev] = grouped[v.sev] || [];
+          grouped[v.sev].push(v);
+        }
+  
+        let html = '<h3 class="subtitle">🔎 Top Vulnerabilities</h3>';
+        ["CRITICAL","HIGH","MEDIUM"].forEach(level => {
+          if (grouped[level]?.length) {
+            html += `<div class="severity-group ${level.toLowerCase()}">`;
+            html += `<h4>${level}</h4><ul>`;
+            grouped[level].slice(0, 5).forEach(v => {
+              html += `<li><strong>${v.pkg}</strong> — ${v.title} <em>(${v.id})</em></li>`;
+            });
+            html += `</ul></div>`;
+          }
+        });
+        detailsBox.innerHTML = html;
+      } else {
+        detailsBox.innerHTML = `<div class="flash">✅ No vulnerabilities found.</div>`;
+      }
+  
+      rawEl.textContent = JSON.stringify(data.raw, null, 2);
+    } catch (err) {
+      summaryEl.textContent = "❌ Failed to scan: " + err.message;
+    }
+  });
+  
+  toggleRaw.addEventListener('click', () => {
+    rawEl.classList.toggle('hidden');
+  });
+</script>
+</body>
+</html>
