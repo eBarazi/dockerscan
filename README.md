@@ -1,3 +1,9 @@
+> ⚠️ **Project Status**
+>
+> DockerScan is still in its early stages of development.  
+> Some features may change or be refined in future builds.  
+> Feedback and suggestions are very welcome!
+
 # DockerScan
 
 A lightweight Flask + Trivy web dashboard to scan Docker images for vulnerabilities.
