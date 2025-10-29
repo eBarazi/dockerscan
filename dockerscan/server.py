@@ -6,11 +6,28 @@ client = docker.from_env()
 
 @app.route("/")
 def index():
-    images = [
-        {"id": img.short_id, "tags": img.tags or ["<none>:<none>"]}
-        for img in client.images.list()
-    ]
-    return render_template("index.html", images=images)
+    # Detect mode: 'images' (default) or 'containers'
+    mode = request.args.get("mode", "images")
+
+    if mode == "containers":
+        # List running containers
+        containers = [
+            {
+                "id": c.short_id,
+                "name": c.name,
+                "image": c.image.tags[0] if c.image.tags else "<none>:<none>",
+                "status": c.status
+            }
+            for c in client.containers.list()
+        ]
+        return render_template("index.html", items=containers, mode=mode)
+    else:
+        # List available images
+        images = [
+            {"id": img.short_id, "tags": img.tags or ["<none>:<none>"]}
+            for img in client.images.list()
+        ]
+        return render_template("index.html", items=images, mode=mode)
 
 @app.route("/scan", methods=["POST"])
 def scan():
