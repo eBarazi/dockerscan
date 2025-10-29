@@ -7,15 +7,32 @@
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-  <h1> DockerScan </h1>
+  <h1>DockerScan</h1>
 
   <div class="container">
+    <!-- Toggle Switch -->
+    <div class="switch-row">
+      <label class="switch">
+        <input type="checkbox" id="modeToggle" onchange="toggleMode()" {{ 'checked' if mode == 'containers' else '' }}>
+        <span class="slider"></span>
+      </label>
+      <span id="modeLabel">{{ 'Showing Containers' if mode == 'containers' else 'Showing Images' }}</span>
+    </div>
+
     <form id="scanForm">
-      <label for="image">Select an image to scan:</label>
+      <label for="image">
+        Select a {{ 'container' if mode == 'containers' else 'image' }} to scan:
+      </label>
       <select id="image" name="image">
-        {% for img in images %}
-          <option value="{{ img.tags[0] }}">{{ img.tags[0] }}</option>
-        {% endfor %}
+        {% if mode == 'containers' %}
+          {% for c in items %}
+            <option value="{{ c.image }}">{{ c.name }} — {{ c.status }}</option>
+          {% endfor %}
+        {% else %}
+          {% for img in items %}
+            <option value="{{ img.tags[0] }}">{{ img.tags[0] }}</option>
+          {% endfor %}
+        {% endif %}
       </select>
       <button type="submit">Scan</button>
     </form>
@@ -29,34 +46,40 @@
   </div>
 
 <script>
+  function toggleMode() {
+    const checked = document.getElementById("modeToggle").checked;
+    const newMode = checked ? "containers" : "images";
+    window.location.href = `/?mode=${newMode}`;
+  }
+
   const form = document.getElementById('scanForm');
   const resultsDiv = document.getElementById('results');
   const summaryEl = document.getElementById('summary');
   const rawEl = document.getElementById('raw');
   const toggleRaw = document.getElementById('toggleRaw');
-  
+
   // Create container for detailed list
   const detailsBox = document.createElement('div');
   detailsBox.classList.add('details-box');
   resultsDiv.appendChild(detailsBox);
-  
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     summaryEl.textContent = "🔍 Scanning...";
     resultsDiv.classList.remove('hidden');
     rawEl.classList.add('hidden');
     detailsBox.innerHTML = '';
-  
+
     const formData = new FormData(form);
     try {
       const res = await fetch('/scan', { method: 'POST', body: formData });
       const data = await res.json();
-  
+
       if (data.error) {
         summaryEl.textContent = "⚠️ Error: " + data.error;
         return;
       }
-  
+
       const s = data.summary;
       const total = Object.values(s).reduce((a,b)=>a+b,0);
       summaryEl.innerHTML = `
@@ -69,8 +92,7 @@
         </div>
         <div>Total vulnerabilities: ${total}</div>
       `;
-  
-      // Build readable summaries
+
       const vulns = [];
       data.raw.Results?.forEach(res => {
         res.Vulnerabilities?.forEach(v => {
@@ -82,14 +104,14 @@
           });
         });
       });
-  
+
       if (vulns.length > 0) {
         const grouped = {};
         for (const v of vulns) {
           grouped[v.sev] = grouped[v.sev] || [];
           grouped[v.sev].push(v);
         }
-  
+
         let html = '<h3 class="subtitle">🔎 Top Vulnerabilities</h3>';
         ["CRITICAL","HIGH","MEDIUM"].forEach(level => {
           if (grouped[level]?.length) {
@@ -105,13 +127,13 @@
       } else {
         detailsBox.innerHTML = `<div class="flash">✅ No vulnerabilities found.</div>`;
       }
-  
+
       rawEl.textContent = JSON.stringify(data.raw, null, 2);
     } catch (err) {
       summaryEl.textContent = "❌ Failed to scan: " + err.message;
     }
   });
-  
+
   toggleRaw.addEventListener('click', () => {
     rawEl.classList.toggle('hidden');
   });
