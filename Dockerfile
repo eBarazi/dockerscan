@@ -6,7 +6,7 @@ WORKDIR /build
 RUN apt-get update -qq && \
     apt-get install -y -qq wget curl ca-certificates tar && \
     pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir flask docker requests && \
+    pip install --no-cache-dir flask docker requests gunicorn && \
     curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
       | sh -s -- -b /build/trivy-bin && \
     chmod +x /build/trivy-bin/trivy
@@ -26,4 +26,4 @@ COPY --from=builder /build/app /app
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 
 EXPOSE 8888
-CMD ["python", "server.py"]
+CMD ["sh", "-c", "gunicorn --workers $(nproc) --threads 2 --bind 0.0.0.0:8888 server:app"]
